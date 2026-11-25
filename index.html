@@ -121,6 +121,27 @@
             <button class="count-button" type="button" data-count="50" aria-pressed="false">50</button>
           </div>
 
+          <button
+            class="ink-toggle"
+            id="inkToggle"
+            type="button"
+            data-ink-toggle
+            aria-pressed="false"
+            aria-label="Toggle Invisible Ink sight-reading mode"
+            title="Invisible Ink sight-reading (Alt+F)"
+          >
+            <span class="ink-toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="2" y1="2" x2="22" y2="22"></line>
+              </svg>
+            </span>
+            <span class="ink-toggle-label">Flash</span>
+            <span class="ink-toggle-shortcut" aria-hidden="true">Alt F</span>
+          </button>
+
           <button class="icon-button icon-button--compact" id="restartButton" type="button" title="New test (Esc)" aria-label="Start a new test">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M20 11a8 8 0 1 0-2.34 5.66"></path>
@@ -197,7 +218,10 @@
             </div>
           </div>
 
-          <div class="prompt-arabic" id="promptArabic" lang="ar" dir="rtl"></div>
+          <div class="prompt-arabic-wrap" id="promptArabicWrap">
+            <div class="prompt-arabic" id="promptArabic" lang="ar" dir="rtl"></div>
+            <canvas class="invisible-ink-canvas" id="invisibleInkCanvas" aria-hidden="true"></canvas>
+          </div>
 
           <div class="prompt-input-wrap">
             <div class="prompt-hint" id="promptHint" role="status" aria-live="polite" hidden></div>
@@ -651,6 +675,29 @@
           </div>
         </section>
 
+        <!-- Invisible Ink / Sight Reading -->
+        <section class="drawer-section">
+          <div class="drawer-section-header">
+            <span class="drawer-section-label">Sight Reading</span>
+            <span class="drawer-section-value" id="drawerInkValueLabel">Off</span>
+          </div>
+          <button
+            class="drawer-pill drawer-ink-toggle"
+            id="drawerInkToggle"
+            type="button"
+            data-ink-toggle
+            aria-pressed="false"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+              <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="2" y1="2" x2="22" y2="22"></line>
+            </svg>
+            <span id="drawerInkLabel">Flash · Invisible Ink</span>
+          </button>
+        </section>
+
         <!-- Word Count -->
         <section class="drawer-section drawer-count-section" id="drawerCountSection">
           <span class="drawer-section-label">Word Count</span>
@@ -688,6 +735,7 @@
   <script src="js/dialect-manager.js"></script>
   <script src="js/data-loader.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/invisible-ink.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

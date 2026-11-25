@@ -635,6 +635,80 @@ kbd {
   box-shadow: var(--raised-shadow);
 }
 
+/* Invisible Ink / sight-reading pill */
+.ink-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.28rem 0.62rem;
+  border: 1px solid var(--mid-border);
+  border-radius: 999px;
+  background: var(--mid-surface);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    color 150ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 200ms var(--ease-out-expo),
+    transform 120ms var(--ease-out-expo);
+}
+
+.ink-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text-soft);
+}
+
+.ink-toggle:active {
+  transform: scale(0.985);
+}
+
+.ink-toggle-icon {
+  display: inline-flex;
+  color: var(--muted);
+  transition: color 180ms ease, filter 200ms ease;
+}
+
+.ink-toggle-label {
+  font-weight: 500;
+}
+
+.ink-toggle-shortcut {
+  padding-left: 0.38rem;
+  border-left: 1px solid var(--border);
+  color: var(--faint);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.ink-toggle.is-active {
+  border-color: rgba(16, 185, 129, 0.4);
+  background:
+    linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.035) 100%),
+    var(--mid-surface);
+  color: #F5F5F7;
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.07),
+    0 0 18px -4px rgba(16, 185, 129, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.ink-toggle.is-active .ink-toggle-icon {
+  color: #34D399;
+  filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.55));
+}
+
+.ink-toggle.is-active .ink-toggle-shortcut {
+  border-left-color: rgba(16, 185, 129, 0.25);
+  color: #34D399;
+  opacity: 0.92;
+}
+
 .script-tab:active,
 .count-button:active {
   transform: scale(0.985);
@@ -994,6 +1068,38 @@ kbd {
   color: rgba(244, 63, 94, 0.72);
 }
 
+.prompt-arabic-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  justify-content: center;
+}
+
+.invisible-ink-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  will-change: opacity;
+}
+
+.invisible-ink-canvas.is-visible {
+  opacity: 1;
+}
+
+.invisible-ink-canvas.is-revealing {
+  transition-duration: 120ms;
+}
+
+.invisible-ink-canvas.is-instant {
+  transition: none !important;
+}
+
 .prompt-arabic {
   max-width: 100%;
   min-height: 1.65em;
@@ -1012,7 +1118,21 @@ kbd {
   text-rendering: optimizeLegibility;
   text-shadow: 0 0 55px rgba(245, 245, 247, 0.07);
   text-wrap: balance;
-  transition: color 180ms ease;
+  transition:
+    color 180ms ease,
+    opacity 0.18s ease-out,
+    filter 0.18s ease-out;
+}
+
+/* Invisible Ink: the glyph silhouette dissolves into an unreadable ghost. */
+.prompt-arabic.is-ink-hidden {
+  opacity: 0.04;
+  filter: blur(8px);
+}
+
+/* peek must be able to clear the veil even while the word-switch animation runs */
+.prompt-arabic.is-ink-hidden.is-word-switch {
+  animation: none;
 }
 
 .prompt-arabic.is-word-switch {
@@ -1168,7 +1288,8 @@ html.font-classical .prompt-latin[lang="ar"] {
   transition:
     opacity 120ms ease-in-out,
     transform 160ms var(--mode-spring),
-    border-color 180ms ease;
+    border-color 180ms ease,
+    filter 0.18s ease-out;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1177,6 +1298,13 @@ html.font-classical .prompt-latin[lang="ar"] {
 .word-feedback.is-visible .word-feedback-content {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Once typing starts, the meaning is veiled alongside the Arabic word. */
+.word-feedback.is-ink-veiled .word-feedback-content {
+  opacity: 0.04;
+  filter: blur(7px);
+  transform: translateY(2px);
 }
 
 .word-feedback.is-word-change .word-feedback-content {
@@ -3494,6 +3622,37 @@ dialog::backdrop {
     color: var(--text);
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+
+  .drawer-ink-toggle {
+    gap: 0.5rem;
+    min-height: 44px;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .drawer-ink-toggle svg {
+    flex-shrink: 0;
+    opacity: 0.85;
+    transition: color 180ms ease, opacity 180ms ease;
+  }
+
+  .drawer-ink-toggle.is-active {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%);
+    color: #F5F5F7;
+    box-shadow:
+      0 0 0 1px rgba(16, 185, 129, 0.06),
+      0 0 18px -4px rgba(16, 185, 129, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .drawer-ink-toggle.is-active svg {
+    color: #34D399;
+    opacity: 1;
+    filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5));
   }
 
   .drawer-pill.script-tab--arabic {

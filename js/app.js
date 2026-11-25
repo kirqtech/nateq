@@ -15,6 +15,8 @@
   var STORAGE_SCRIPT = 'nateq.script.v1';
   var STORAGE_FONT = 'nateq_arabic_font';
   var STORAGE_ARABIC_SIZE = 'nateq_arabic_size';
+  var STORAGE_INVISIBLE_INK = 'nateq_invisible_ink';
+  var INK_PEEK_MS = 1200;
 
   var ARABIC_SIZE_PRESETS = {
     S: { key: 'S', label: 'S', value: '2rem', rem: 2.0 },
@@ -125,7 +127,9 @@
     failedMode: '',
     loading: false,
     renderedWordIndex: -1,
-    wordMotionTimer: null
+    wordMotionTimer: null,
+    invisibleInk: false,
+    ink: null
   };
 
   var els = {};
@@ -354,6 +358,99 @@
     els.wordFeedback.classList.remove('is-visible');
     window.clearTimeout(state.feedbackTimer);
     state.feedbackTimer = null;
+  }
+
+  /* ------------------------------------------------------------------------
+     Invisible Ink (sight reading)
+     ------------------------------------------------------------------------ */
+
+  function isInvisibleInkMode(mode) {
+    return mode === 'words' || mode === 'reading' || mode === 'phrases' || mode === 'custom';
+  }
+
+  function updateInkToggleUI() {
+    if (els.inkToggles) {
+      els.inkToggles.forEach(function (button) {
+        var active = !!state.invisibleInk;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+    }
+    if (els.drawerInkValueLabel) {
+      els.drawerInkValueLabel.textContent = state.invisibleInk ? 'On' : 'Off';
+    }
+  }
+
+  function setTranslationVeiled(veiled) {
+    if (!els.wordFeedback) return;
+    els.wordFeedback.classList.toggle('is-ink-veiled', !!veiled);
+  }
+
+  /** Drives the veil from the typing state machine. Idle = crisp word. */
+  function syncInvisibleInk(word, parse) {
+    var ink = state.ink;
+    if (!ink) return;
+
+    var active = !!state.invisibleInk &&
+      !!state.test &&
+      isInvisibleInkMode(state.test.mode);
+
+    if (!active) {
+      if (ink.enabled) ink.setEnabled(false);
+      setTranslationVeiled(false);
+      return;
+    }
+
+    ink.setEnabled(true);
+
+    var typed = !!(word && word.input && word.input.length);
+    var complete = !!(parse && parse.complete);
+
+    if (!typed || complete) {
+      if (ink.isConcealed()) ink.reveal(false);
+      setTranslationVeiled(false);
+      return;
+    }
+
+    if (els.promptArabic) els.promptArabic.classList.remove('is-word-switch');
+    ink.conceal();
+    setTranslationVeiled(true);
+  }
+
+  function peekInvisibleInk() {
+    if (!state.invisibleInk || !state.ink) return;
+    if (state.ink.isConcealed()) state.ink.peek(INK_PEEK_MS);
+  }
+
+  function setInvisibleInk(enabled, options) {
+    var next = !!enabled;
+    var opts = options || {};
+    state.invisibleInk = next;
+    writeStorage(STORAGE_INVISIBLE_INK, next ? 'true' : 'false');
+    updateInkToggleUI();
+
+    if (!state.ink) return;
+
+    if (!next) {
+      state.ink.setEnabled(false);
+      setTranslationVeiled(false);
+      return;
+    }
+
+    var word = currentWord();
+    if (state.test && word) {
+      syncInvisibleInk(word, parseWord(word));
+    } else {
+      state.ink.setEnabled(true);
+    }
+
+    if (!opts.silent) {
+      showToast(next ? 'Sight-reading on · type from memory' : 'Sight-reading off', 1600);
+    }
+  }
+
+  function toggleInvisibleInk() {
+    setInvisibleInk(!state.invisibleInk);
   }
 
   /* ------------------------------------------------------------------------
@@ -720,12 +817,17 @@
 
     if (els.clearButton) els.clearButton.disabled = !word.input.length;
     updateActiveSubtitle(word);
-    updateInstruction(parseWord(word));
+    var parse = parseWord(word);
+    updateInstruction(parse);
 
     if (wordChanged) {
       state.renderedWordIndex = test.index;
+      // A fresh word starts fully crisp with the particle loop parked.
+      if (state.ink && state.invisibleInk) state.ink.reveal(true);
       playWordChange();
     }
+
+    syncInvisibleInk(word, parse);
   }
 
   /** Swift blur-and-fade crossfade whenever the active word advances. */
@@ -918,6 +1020,8 @@
     clearTimers();
     clearHint();
     hideReview();
+    if (state.ink) state.ink.reveal(true);
+    setTranslationVeiled(false);
     state.test = test;
     state.renderedWordIndex = -1;
     state.tabPressedAt = 0;
@@ -1077,6 +1181,8 @@
 
     clearHint();
     hideReview();
+    if (state.ink) state.ink.reveal(true);
+    setTranslationVeiled(false);
     updateStats();
     updateInstruction(null);
     showResults(test);
@@ -1461,6 +1567,7 @@
     if (!test || test.status === 'finished' || test.finishing) return;
     state.tabPressedAt = 0;
     showHint(false);
+    peekInvisibleInk();
   }
 
   function showReview(word) {
@@ -1699,6 +1806,8 @@
     state.errorToken = -1;
     state.errorCount = 0;
     hideHint();
+    if (state.ink) state.ink.reveal();
+    setTranslationVeiled(false);
     showWordFeedback(word);
 
     if (correct) {
@@ -1874,6 +1983,14 @@
       } else {
         openDialectModal();
       }
+      return;
+    }
+
+    // Invisible Ink / sight-reading: Alt+F
+    if (event.altKey && !event.ctrlKey && !event.metaKey &&
+        (event.key === 'f' || event.key === 'F' || event.code === 'KeyF')) {
+      event.preventDefault();
+      toggleInvisibleInk();
       return;
     }
 
@@ -2669,6 +2786,10 @@
     els.queueWrap = $('queueWrap');
     els.prompt = $('prompt');
     els.promptArabic = $('promptArabic');
+    els.promptArabicWrap = $('promptArabicWrap');
+    els.inkCanvas = $('invisibleInkCanvas');
+    els.inkToggles = Array.from(document.querySelectorAll('[data-ink-toggle]'));
+    els.drawerInkValueLabel = $('drawerInkValueLabel');
     els.promptLatin = $('promptLatin');
     els.promptInputWrap = document.querySelector('.prompt-input-wrap');
     els.promptHint = $('promptHint');
@@ -2827,6 +2948,15 @@
         setScript(button.dataset.script, { restart: true });
       });
     });
+
+    if (els.inkToggles) {
+      els.inkToggles.forEach(function (button) {
+        button.addEventListener('click', function () {
+          toggleInvisibleInk();
+          focusTyping();
+        });
+      });
+    }
 
     els.restartButton.addEventListener('click', function () {
       hideToast();
@@ -3254,6 +3384,19 @@
 
     var storedSize = readStorage(STORAGE_ARABIC_SIZE, 'M');
     state.arabicSize = storedSize || 'M';
+
+    state.invisibleInk = readStorage(STORAGE_INVISIBLE_INK, 'false') === 'true';
+  }
+
+  function initInvisibleInk() {
+    if (!window.InvisibleInkOverlay || !els.promptArabic || !els.inkCanvas) return;
+    state.ink = new window.InvisibleInkOverlay(
+      els.inkCanvas,
+      els.promptArabic,
+      els.promptArabicWrap || els.promptArabic.parentElement
+    );
+    state.ink.setEnabled(state.invisibleInk);
+    updateInkToggleUI();
   }
 
   function init() {
@@ -3261,6 +3404,8 @@
     loadPreferences();
     applyFontStyle(state.fontStyle, { persist: false });
     applyArabicSize(state.arabicSize, { persist: false });
+    initInvisibleInk();
+    updateInkToggleUI();
     updateSettingsForm();
     applyScriptCopy();
     updateModePill(state.mode, false);
