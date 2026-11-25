@@ -720,7 +720,7 @@ kbd {
 
 .stats-bar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(4rem, auto)) minmax(8rem, 1fr);
+  grid-template-columns: repeat(5, minmax(4rem, auto)) minmax(8rem, 1fr);
   align-items: center;
   gap: clamp(1rem, 2.4vw, 2.2rem);
   margin-top: 1.15rem;
@@ -970,10 +970,12 @@ kbd {
     linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.005) 100%);
   box-shadow:
     0 30px 80px -20px rgba(0, 0, 0, 0.9),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 0 28px -6px rgba(16, 185, 129, 0);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   outline: none;
+  transition: border-color 600ms ease, box-shadow 600ms ease;
 }
 
 .prompt {
@@ -1688,6 +1690,7 @@ html.font-classical .prompt-latin[lang="ar"] {
   display: flex;
   align-items: baseline;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 0.6rem;
   margin-bottom: 1rem;
 }
@@ -2942,7 +2945,8 @@ dialog::backdrop {
   .font-pill,
   #fontPill,
   #legendButton,
-  #settingsButton {
+  #settingsButton,
+  #soundToggleButton {
     display: none !important;
   }
 
@@ -4426,6 +4430,117 @@ dialog::backdrop {
   }
   to {
     transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Game juice: flow multiplier, combo aura, personal bests, sound toggle
+   -------------------------------------------------------------------------- */
+
+.stat-cell--flow .stat-value {
+  color: var(--muted);
+  transition: color 260ms ease, text-shadow 260ms ease;
+}
+
+.stat-cell--flow .stat-value.is-active {
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
+}
+
+.stat-cell--flow.is-hot .stat-value {
+  color: var(--accent-strong);
+  text-shadow: 0 0 22px rgba(16, 185, 129, 0.45);
+}
+
+#testStage.flow-high {
+  border-color: rgba(16, 185, 129, 0.25);
+  box-shadow:
+    0 30px 80px -20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 0 28px -6px rgba(16, 185, 129, 0.22);
+}
+
+.results-record-pill {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  padding: 0.2rem 0.62rem;
+  border: 1px solid rgba(16, 185, 129, 0.42);
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-strong);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 0 18px -8px rgba(16, 185, 129, 0.6);
+}
+
+.results-record-pill[hidden] {
+  display: none;
+}
+
+.results-pb {
+  margin: -0.45rem 0 1rem;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.results-pb[hidden] {
+  display: none;
+}
+
+.sound-toggle .sound-icon--off {
+  display: none;
+}
+
+.sound-toggle[aria-pressed="false"] .sound-icon--on {
+  display: none;
+}
+
+.sound-toggle[aria-pressed="false"] .sound-icon--off {
+  display: block;
+}
+
+.sound-toggle[aria-pressed="false"] {
+  color: var(--faint);
+}
+
+#drawerSoundToggle .sound-icon--off {
+  display: none;
+}
+
+#drawerSoundToggle[aria-pressed="false"] .sound-icon--on {
+  display: none;
+}
+
+#drawerSoundToggle[aria-pressed="false"] .sound-icon--off {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .stat-cell--flow .stat-label {
+    display: none;
+  }
+
+  .stat-cell--flow .stat-value {
+    font-size: 0.9rem;
+  }
+
+  #testStage.flow-high {
+    border-color: transparent;
+    box-shadow: inset 0 0 40px -18px rgba(16, 185, 129, 0.22);
+  }
+}
+
+@media (max-width: 380px) {
+  .stats-bar {
+    gap: 1.15rem;
   }
 }
 

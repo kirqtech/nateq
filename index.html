@@ -88,6 +88,18 @@
             <circle cx="8" cy="17" r="2"></circle>
           </svg>
         </button>
+        <button class="icon-button sound-toggle" id="soundToggleButton" type="button" aria-pressed="true" title="Sound: on (Alt+M)" aria-label="Toggle typing sounds">
+          <svg class="sound-icon sound-icon--on" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M11 5 6 9H2v6h4l5 4z"></path>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg class="sound-icon sound-icon--off" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M11 5 6 9H2v6h4l5 4z"></path>
+            <line x1="22" y1="9" x2="16" y2="15"></line>
+            <line x1="16" y1="9" x2="22" y2="15"></line>
+          </svg>
+        </button>
         <button class="icon-button mobile-menu-btn" id="mobileMenuBtn" type="button" title="Settings" aria-label="Open settings" aria-haspopup="dialog" aria-controls="mobileDrawer">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <line x1="4" y1="7" x2="20" y2="7"></line>
@@ -163,6 +175,10 @@
         <div class="stat-cell stat-cell--streak">
           <span class="stat-value" id="statStreak">-</span>
           <span class="stat-label">streak</span>
+        </div>
+        <div class="stat-cell stat-cell--flow" id="flowBadgeCell">
+          <span class="stat-value" id="flowMultiplier">1x</span>
+          <span class="stat-label">flow</span>
         </div>
         <div class="stat-cell stat-cell--time">
           <span class="stat-value" id="statTime">-</span>
@@ -291,7 +307,9 @@
       <div class="results-hero">
         <span class="results-wpm" id="resultWpm">0</span>
         <span class="results-unit">wpm</span>
+        <span class="results-record-pill" id="resultRecordPill" hidden>NEW RECORD</span>
       </div>
+      <p class="results-pb" id="resultPb" hidden></p>
       <div class="results-grid">
         <div class="stat-badge">
           <span class="result-label">accuracy</span>
@@ -698,6 +716,27 @@
           </button>
         </section>
 
+        <!-- Typing Sounds -->
+        <section class="drawer-section">
+          <div class="drawer-section-header">
+            <span class="drawer-section-label">Typing Sounds</span>
+            <span class="drawer-section-value" id="drawerSoundValueLabel">On</span>
+          </div>
+          <button class="drawer-pill drawer-ink-toggle is-active" id="drawerSoundToggle" type="button" aria-pressed="true">
+            <svg class="sound-icon sound-icon--on" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 5 6 9H2v6h4l5 4z"></path>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg class="sound-icon sound-icon--off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 5 6 9H2v6h4l5 4z"></path>
+              <line x1="22" y1="9" x2="16" y2="15"></line>
+              <line x1="16" y1="9" x2="22" y2="15"></line>
+            </svg>
+            <span id="drawerSoundLabel">Keystroke &amp; combo chime</span>
+          </button>
+        </section>
+
         <!-- Word Count -->
         <section class="drawer-section drawer-count-section" id="drawerCountSection">
           <span class="drawer-section-label">Word Count</span>
@@ -736,6 +775,7 @@
   <script src="js/data-loader.js"></script>
   <script src="js/data.js"></script>
   <script src="js/invisible-ink.js"></script>
+  <script src="js/sound-engine.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

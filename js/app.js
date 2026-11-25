@@ -16,6 +16,7 @@
   var STORAGE_FONT = 'nateq_arabic_font';
   var STORAGE_ARABIC_SIZE = 'nateq_arabic_size';
   var STORAGE_INVISIBLE_INK = 'nateq_invisible_ink';
+  var STORAGE_PBS = 'nateq_pbs';
   var INK_PEEK_MS = 1200;
 
   var ARABIC_SIZE_PRESETS = {
@@ -176,6 +177,102 @@
 
   function setText(element, text) {
     if (element) element.textContent = text;
+  }
+
+  function playSound(name, arg) {
+    var engine = window.NateqSound;
+    if (engine && typeof engine[name] === 'function') {
+      engine[name](arg);
+    }
+  }
+
+  function syncSoundUI() {
+    var enabled = !!(window.NateqSound && window.NateqSound.isEnabled());
+    if (els.soundToggleButton) {
+      els.soundToggleButton.setAttribute('aria-pressed', String(enabled));
+      els.soundToggleButton.title = enabled ? 'Sound: on (Alt+M)' : 'Sound: off (Alt+M)';
+    }
+    if (els.drawerSoundToggle) {
+      els.drawerSoundToggle.setAttribute('aria-pressed', String(enabled));
+      els.drawerSoundToggle.classList.toggle('is-active', enabled);
+    }
+    if (els.drawerSoundValueLabel) {
+      setText(els.drawerSoundValueLabel, enabled ? 'On' : 'Off');
+    }
+    if (els.drawerSoundLabel) {
+      setText(els.drawerSoundLabel, enabled ? 'Keystroke & combo chime' : 'Muted');
+    }
+  }
+
+  function toggleSound() {
+    if (!window.NateqSound || typeof window.NateqSound.toggle !== 'function') return;
+    var enabled = window.NateqSound.toggle();
+    syncSoundUI();
+    if (enabled) playSound('playKeystroke');
+  }
+
+  function getActiveDialectId() {
+    var active = (Dialects && typeof Dialects.getActiveDialect === 'function')
+      ? Dialects.getActiveDialect()
+      : null;
+    return (active && active.id) || 'levantine';
+  }
+
+  function readPbs() {
+    try {
+      var raw = window.localStorage.getItem(STORAGE_PBS);
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      return parsed;
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function writePbs(map) {
+    try {
+      window.localStorage.setItem(STORAGE_PBS, JSON.stringify(map));
+    } catch (error) {
+      // Storage failure must never break the results screen.
+    }
+  }
+
+  function evaluatePersonalBest(test, wpm, accuracy) {
+    var key = (test.dialectId || getActiveDialectId()) + ':' + test.mode;
+    var map = readPbs();
+    var prev = typeof map[key] === 'number' ? map[key] : null;
+    var score = wpm == null ? 0 : wpm;
+    var acc = accuracy == null ? 0 : accuracy;
+    var isRecord = acc >= 85 && score > 0 && (prev == null || score > prev);
+    if (isRecord) {
+      map[key] = score;
+      writePbs(map);
+    }
+    return { isRecord: isRecord, prev: prev, best: map[key] };
+  }
+
+  function getFlowMultiplier(streak) {
+    if (streak >= 20) return 4;
+    if (streak >= 12) return 3;
+    if (streak >= 5) return 2;
+    return 1;
+  }
+
+  function updateFlowUI() {
+    var test = state.test;
+    var streak = test ? (test.flowStreak || 0) : 0;
+    var multiplier = getFlowMultiplier(streak);
+    if (els.flowMultiplier) {
+      setText(els.flowMultiplier, multiplier + 'x');
+      els.flowMultiplier.classList.toggle('is-active', multiplier > 1);
+    }
+    if (els.flowBadgeCell) {
+      els.flowBadgeCell.classList.toggle('is-hot', multiplier >= 3);
+    }
+    if (els.testStage) {
+      els.testStage.classList.toggle('flow-high', multiplier >= 3);
+    }
   }
 
   function formatLiveTime(ms) {
@@ -677,6 +774,8 @@
       correctKeystrokes: 0,
       streak: 0,
       maxStreak: 0,
+      flowStreak: 0,
+      dialectId: getActiveDialectId(),
       startedAt: null,
       endedAt: null,
       status: 'ready',
@@ -967,6 +1066,7 @@
     setText(els.statProgress, completed + ' / ' + total);
     els.progressFill.style.width = progress + '%';
     els.progressTrack.setAttribute('aria-valuenow', String(progress));
+    updateFlowUI();
   }
 
   function setStat(element, value) {
@@ -1171,6 +1271,8 @@
         test.correctWords += 1;
         test.streak += 1;
         test.maxStreak = Math.max(test.maxStreak, test.streak);
+        test.flowStreak = (test.flowStreak || 0) + 1;
+        playSound('playWordComplete', Math.max(0, test.flowStreak - 1));
       }
     }
 
@@ -1207,6 +1309,22 @@
     setText(els.resultStreak, String(test.maxStreak));
     setText(els.resultTime, formatResultTime(duration));
     setText(els.resultWords, test.correctWords + ' / ' + test.words.length);
+
+    var pb = evaluatePersonalBest(test, wpm, accuracy);
+    if (els.resultRecordPill) {
+      els.resultRecordPill.hidden = !pb.isRecord;
+    }
+    if (els.resultPb) {
+      if (pb.isRecord) {
+        els.resultPb.hidden = false;
+        els.resultPb.textContent = pb.prev == null
+          ? 'first record for this mode'
+          : 'previous best ' + pb.prev + ' wpm';
+      } else {
+        els.resultPb.hidden = true;
+        els.resultPb.textContent = '';
+      }
+    }
 
     var missed = test.words.filter(function (word) {
       return word.committed && word.correct === false;
@@ -1660,6 +1778,7 @@
       if (state.errorCount >= 3) autoHint = true;
     }
 
+    playSound(valid ? 'playKeystroke' : 'playTypo');
     renderActiveWord();
     updateStats();
     lockMobileScroll();
@@ -1815,6 +1934,8 @@
       test.correctKeystrokes += 1;
       test.streak += 1;
       test.maxStreak = Math.max(test.maxStreak, test.streak);
+      test.flowStreak = (test.flowStreak || 0) + 1;
+      playSound('playWordComplete', Math.max(0, test.flowStreak - 1));
       hideReview();
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try {
@@ -1824,6 +1945,8 @@
     } else {
       test.incorrectWords += 1;
       test.streak = 0;
+      test.flowStreak = 0;
+      playSound('playTypo');
       flashActiveError();
       showReview(word);
     }
@@ -1994,6 +2117,14 @@
       return;
     }
 
+    // Sound toggle: Alt+M
+    if (event.altKey && !event.ctrlKey && !event.metaKey &&
+        (event.key === 'm' || event.key === 'M' || event.code === 'KeyM')) {
+      event.preventDefault();
+      toggleSound();
+      return;
+    }
+
     if (event.key === 'F1') {
       event.preventDefault();
       if (els.sheetDialog.open) {
@@ -2068,6 +2199,7 @@
         handleCharacter(character);
       } else {
         flashActiveError();
+        if (!state.test || !state.test.finishing) playSound('playTypo');
       }
     }
   }
@@ -2819,6 +2951,14 @@
     els.statProgress = $('statProgress');
     els.progressFill = $('progressFill');
     els.progressTrack = $('progressTrack');
+    els.flowMultiplier = $('flowMultiplier');
+    els.flowBadgeCell = $('flowBadgeCell');
+    els.resultRecordPill = $('resultRecordPill');
+    els.resultPb = $('resultPb');
+    els.soundToggleButton = $('soundToggleButton');
+    els.drawerSoundToggle = $('drawerSoundToggle');
+    els.drawerSoundValueLabel = $('drawerSoundValueLabel');
+    els.drawerSoundLabel = $('drawerSoundLabel');
 
     els.resultWpm = $('resultWpm');
     els.resultAccuracy = $('resultAccuracy');
@@ -2955,6 +3095,18 @@
           toggleInvisibleInk();
           focusTyping();
         });
+      });
+    }
+
+    if (els.soundToggleButton) {
+      els.soundToggleButton.addEventListener('click', function () {
+        toggleSound();
+        focusTyping();
+      });
+    }
+    if (els.drawerSoundToggle) {
+      els.drawerSoundToggle.addEventListener('click', function () {
+        toggleSound();
       });
     }
 
@@ -3406,6 +3558,7 @@
     applyArabicSize(state.arabicSize, { persist: false });
     initInvisibleInk();
     updateInkToggleUI();
+    syncSoundUI();
     updateSettingsForm();
     applyScriptCopy();
     updateModePill(state.mode, false);
